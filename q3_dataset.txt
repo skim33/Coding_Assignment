@@ -1,0 +1,122 @@
+------------------------------------------------------------------------------
+Name: Woohyuk Kim
+Q3. Dataset
+
+Date: November 17th, 2021
+------------------------------------------------------------------------------
+
+★ How would you normalize (parsing, pre-processing, grouping) this data to simplify it’s processing into a database ?
+
+In order to normalize the dataset given, I would firstly parse the data using Python. Since the dataset is CSV formatted, using Python with libraries such as numpy and pandas, seems to be
+the best option.
+
+One of the ways to import data is using pandas' read_csv() function:
+
+  import pandas as pd
+  data_file = 'Dataset_-_Dataset.csv'
+  df = pd.read_csv(data_file)
+
+In regard to data pre-processing, due to the fact that real world data is generally incomplete, errors are likely to arise when
+dealing with them. Pre-processing is a neccessary step which allows us to resolve these pottential issues.
+The given dataset obviously has missing values in certain columns such as (F19, F20, G21....and so on).
+To be specific, 
+  print(df.isnull().sum()) outputs
+
+    Product         0
+    Country         0
+    Variety        82
+    Grades        290
+    Region          0
+          ... 
+    2017-12-25    659
+    2017-12-18    614
+    2017-12-11    611
+    2017-12-04    608
+    2017-11-27    608
+
+, which means the number is the missing values in each column. Handling missing values is important because 
+if they are not handled properly, the data deliverables will probably be inaccurate.
+Therefore, it might be a good idea to replace the missing price value(numeric) at a specific time with mean, median or mode.
+For example, df = df.iloc[:, 5:].mean(axis=1) outputs mean price for each row.
+Additionally, missing categorical values like grades and variety can be replaced with dummy variables.
+It indicates the absence or presence of categorical data by using the value 0 or 1.
+It is also certainly better to drop columns or row where all elements are NaN in order to symplyfy data processing.
+
+  # axis=1: column
+  # axis=0: row
+  df.dropna(axis=1, how='all')
+
+In terms of grouping, it is a good idea to group data by columns as it will simplify its processing into a database.
+It will also provide us with an easier way to extract additional values from the dataset, such as the number of products regardless of its variety and grade from a specific region.
+I would use groupby() function from pandas library which enables us to conduct grouping tasks effectively.
+
+For example, 
+  region_num = df.groupby('Region')['Region'].count() outputs
+
+    Region
+    Araucania                        21
+    Arica                             6
+    Atlanta, Georgia                 21
+    Baltimore, Maryland              52
+    Boston, Massachusetts            30
+    Busan, Gyeongsangnam-do          19
+    Chicago, Illinois                29
+    Chillán, Diguillín                8
+    Chillán, Diguillín Province       3
+  
+groupby('Region') groups data by Region, and count() calculates the number of products in each group, as shown above.
+
+
+★ What additional value can you extract from this dataset ? If you find any please explain how would you collect it (pseudo-algorithm)
+
+There is a number of additional values that can be extracted from the dataset.
+For instance, price change of a product in a certain period of time can be obtained and visualized with graphs using matplotlib:
+
+  import pandas as pd
+  import matplotlib.pyplot as plt
+
+  data_file = 'Dataset_-_Dataset.csv'
+  csv = pd.read_csv('Dataset_-_Dataset.csv',encoding = 'UTF8')
+
+  # row 0, column 5 to column 50(price values)
+  data = csv.iloc[0, 5:51]
+  data.plot(figsize=(15,5), xlabel='Price at', ylabel='Price', title='Price change in 2000')
+
+The output is shown below:
+
+Multiple graphs can be visualized by simply iterating over rows:
+  for i in range(0,5):
+    data = csv.iloc[i, 5:51]
+    data.plot(figsize=(15,5), xlabel='Price at', ylabel='Price', title='Price change in 2000')
+
+Mean price of products from given countries by product grades across three years, can be obtained as well:
+
+  import pandas as pd
+
+  data_file = 'Dataset_-_Dataset.csv'
+  csv = pd.read_csv('Dataset_-_Dataset.csv',encoding = 'UTF8')
+
+  # add Mean collumn and assign mean value to each row
+  csv['Mean'] = csv.iloc[:, 5:].mean(axis=1)
+
+  # takes the three grouping fields, Product, Country, and Grades as parameters in the form of a list
+  country_grades_avg =  csv.groupby(['Product', 'Country', 'Grades'],as_index=False).Mean.mean()
+
+This outputs 
+
+
+★ How would you approach the script of putting this information into a database ?(Concurrency, Scale, Prerequisites, etc..)
+
+Regarding database concurrency, if it is not controlled properly, the database will not be able to handle multiple requests at the same time, due to possible issues like dirty read, non-repeatable read, and phantom read, that may arise.
+These issues can be prevented by setting transaction isolation level. To be specific, setting transaction isolation level to read committed can be a solution to dirty read, and setting it to repeatable read can be a solution to 
+non-repeatable read.　Considering the above, when putting the given dataset into a database, I would initially set transaction isolation level to serializable, which is the strictest isolation level among all. It can be assumed that 
+the database will keep on growing; therefore, it might have the environment where the chance that multiple concurrent transactions update the same rows is not high, and the long-running transactions are setted to read only.
+
+As for database scalability, I would initially use vertical scaling, due to the fact that the database will be relational. It is true that there are some disadvantages of using vertical scaling, for example, there is a physical limit on the amount of hardware 
+such as CPUs and memory, and the servers with more processing power and storage are usually more expensive. However, horizontal scalling is not suitable for relational databases as it has the difficulty in spreading out related data across nodes.
+
+In order to create relational database, I would firstly create entity relationship diagram which will be a useful reference when writing script, as it visualizes entities, attributes, and relationships.
+Below is the possible entity relationship diagram for the given dataset:
+
+
+As can be seen in the diagram, I have normalized the dataset by creating the entity called Market price, and assigning the price values at specific times to it as attributes.
